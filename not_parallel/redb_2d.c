@@ -35,7 +35,12 @@ int main(int an, char **as) {
     return 0;
 }
 
-
+/* matrix like
+0 0 0 0 0
+0 1 2 3 0
+0 2 3 4 0
+0 3 4 5 0
+0 0 0 0 0 */
 void init() {
     for (j = 0; j <= N - 1; j++)
         for (i = 0; i <= N - 1; i++) {
