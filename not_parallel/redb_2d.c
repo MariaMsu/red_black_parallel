@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
@@ -14,12 +15,25 @@ float eps;
 float A[N][N];
 
 void relax();
-
 void init();
-
 void verify();
+int run_read_black_2d();
 
 int main(int an, char **as) {
+    int status;
+    struct timeval start, stop;
+    double secs = 0;
+
+    gettimeofday(&start, NULL);
+    status = run_read_black_2d();
+    gettimeofday(&stop, NULL);
+
+    secs = (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec);
+    printf("time taken for N=%d: %f seconds\n", N, secs);
+    return status;
+}
+
+int run_read_black_2d(){
     int it;
     init();
 
