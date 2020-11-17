@@ -5,7 +5,7 @@
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
-#define  N   (2*2*2*2*2*2+2)
+#define  N   (64+2)
 float maxeps = 0.1e-7;
 int itmax = 100;
 int i, j, k;
@@ -49,7 +49,7 @@ int run_read_black_2d(){
     return 0;
 }
 
-/* matrix like
+/* matrix like, [NxN]
 0 0 0 0 0
 0 1 2 3 0
 0 2 3 4 0
