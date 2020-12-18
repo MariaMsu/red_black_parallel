@@ -3,19 +3,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-// #include <unistd.h>  // todo
+// #include <unistd.h>
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
-#define  N   (64+2)
+#define  N   (1*64+2)
 float maxeps = 0.1e-7;
 int itmax = 100;
 float w = 0.5;
-float eps;
+float eps, local_eps;
 
 float A[N][N];
 float tmp_A_row[N];
-float local_eps;
 
 int rank, num_tasks, num_workers, rc;
 int first_row, last_row, n_rows;
@@ -37,9 +36,6 @@ int main(int an, char **as) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // получаем общее кол-во процессов
     MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-    // ждем, пока все процессы закончат инициализацию
-
-    MPI_Barrier(MPI_COMM_WORLD); // todo 
 
     // -2 becouse first and last row is zero
     n_rows = (N-2) / num_tasks;
@@ -51,65 +47,35 @@ int main(int an, char **as) {
     };
 
     printf("rank %d: first_row %d, last_row %d\n", rank, first_row, last_row);
-    
-    int it;
-    init();
+
+    int status;
+    struct timeval start, stop;
+    double secs = 0;
     if (!rank){
-        printf("\ninit\n");
-    for (int i = 0; i < N; ++i){
-        for (int j = 0; j < N; ++j){
-            printf("%f ", A[i][j]);
-        }
-        printf("\n");
+        gettimeofday(&start, NULL);
     }
-    }
-    for (it = 1; it <= itmax; it++) {
+    
+    init();
+    for (int it = 1; it <= itmax; it++) {
         eps = 0.;
         local_eps = 0.;
         relax();
-        if (!rank) {printf("it=%4i   eps=%f\n", it, eps);}
+        // if (!rank) {printf("it=%4i   eps=%f\n", it, eps);}
         if (eps < maxeps) break;
     }
-
     verify();
 
-
-
-
-
+    if (!rank){
+        gettimeofday(&stop, NULL);
+        secs = (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec);
+        printf("time taken for thread=%d, N=%d: %f seconds\n", 0, N, secs);
+    }
 
     /* Shut down MPI */
     MPI_Finalize();
 
-
-    // int status;
-    // struct timeval start, stop;
-    // double secs = 0;
-
-    // gettimeofday(&start, NULL);
-    // status = run_read_black_2d();
-    // gettimeofday(&stop, NULL);
-
-    // secs = (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec);
-    // printf("time taken for thread=%d, N=%d: %f seconds\n", 0, N, secs);
-    // return status;
+    return 0;
 }
-
-// int run_read_black_2d(){
-//     int it;
-//     init();
-
-//     for (it = 1; it <= itmax; it++) {
-//         eps = 0.;
-//         relax();
-//         // printf("it=%4i   eps=%f\n", it, eps);
-//         if (eps < maxeps) break;
-//     }
-
-//     verify();
-
-//     return 0;
-// }
 
 /* matrix like, [NxN]
 0 0 0 0 0
@@ -162,9 +128,8 @@ void relax() {
     }
 
     MPI_Barrier(MPI_COMM_WORLD); 
+
     // sleep(rank); 
-
-
     // printf("\nrank %d, не чётный\n", rank);
     // for (int i = 0; i < N; ++i){
     //     for (int j = 0; j < N; ++j){
@@ -196,9 +161,8 @@ void relax() {
 
     MPI_Barrier(MPI_COMM_WORLD); 
 
-    /* Reduce local_sum in each proc to sum and broadcast sum. */
+    // Reduce local_eps in each proc
     MPI_Allreduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
-    // MPI_Reduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
 
     // sleep(rank); 
     // printf("\nrank %d, чётный\n", rank);
@@ -219,15 +183,8 @@ void verify() {
     local_sum = 0.;
     int begin = first_row;
     int end = last_row;
-    if (first_row == 1){
-        begin = 0;
-    }
-    if (last_row == N - 1){
-        end = N - 1;
-    }
-
-    printf("rank %d: begin %d, end %d\n", rank, begin, end);
-
+    if (first_row == 1) {begin = 0;}
+    if (last_row == N - 1) {end = N - 1;}
     
     for (int i = begin; i <= end; i++)
         for (int j = 0; j <= N - 1; j++){
@@ -235,5 +192,5 @@ void verify() {
         }
 
     MPI_Reduce(&local_sum, &sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-    printf("  S = %f\n", sum);
+    if (!rank) {printf("  S = %f\n", sum);}
 }
