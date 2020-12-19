@@ -1,0 +1,23 @@
+#BSUB -n 20 -q short
+#BSUB -W 00:29
+#BSUB -o run_256.%J.out
+#BSUB -e run_256.%J.err
+echo 1 thread:
+OMP_NUM_THREADS=1 ./run
+echo 2 threads:
+OMP_NUM_THREADS=2 ./run
+echo 4 threads:
+OMP_NUM_THREADS=4 ./run
+echo 8 threads:
+OMP_NUM_THREADS=8 ./run
+echo 16 threads:
+OMP_NUM_THREADS=16 ./run
+echo 32 threads:
+OMP_NUM_THREADS=32 ./run
+echo 64 threads:
+OMP_NUM_THREADS=64 ./run
+echo 128 threads:
+OMP_NUM_THREADS=128 ./run
+echo 160 threads:
+OMP_NUM_THREADS=160 ./run
+

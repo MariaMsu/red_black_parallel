@@ -74,6 +74,13 @@ void relax() {
                 eps = Max(fabs(b), eps);
                 A[i][j] = A[i][j] + b;
             }
+    // printf("\n");
+    // for (int i = 0; i < N; ++i){
+    //     for (int j = 0; j < N; ++j){
+    //         printf("%f ", A[i][j]);
+    //     }
+    //     printf("\n");
+    // }
     for (j = 1; j <= N - 2; j++)
         for (i = 1; i <= N - 2; i++)
             if ((i + j) % 2 == 0) {
@@ -81,6 +88,15 @@ void relax() {
                 b = w * ((A[i - 1][j] + A[i + 1][j] + A[i][j - 1] + A[i][j + 1]) / 4. - A[i][j]);
                 A[i][j] = A[i][j] + b;
             }
+
+    // printf("\n");
+    // for (int i = 0; i < N; ++i){
+    //     for (int j = 0; j < N; ++j){
+    //         printf("%f ", A[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // printf("\n");
 
 }
 

@@ -7,7 +7,7 @@
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
-#define  N   (1*64+2)
+#define  N   (256*64+2)
 float maxeps = 0.1e-7;
 int itmax = 100;
 float w = 0.5;
@@ -16,7 +16,7 @@ float eps, local_eps;
 float A[N][N];
 float tmp_A_row[N];
 
-int rank, num_tasks, num_workers, rc;
+int rank, num_workers, num_workers, rc;
 int first_row, last_row, n_rows;
 
 void relax();
@@ -35,12 +35,12 @@ int main(int an, char **as) {
     // получаем номер текущего процесса
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // получаем общее кол-во процессов
-    MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
 
     // -2 becouse first and last row is zero
-    n_rows = (N-2) / num_tasks;
+    n_rows = (N-2) / num_workers;
     first_row = n_rows * rank + 1;
-    if (rank != num_tasks-1){
+    if (rank != num_workers-1){
         last_row = first_row + n_rows;
     } else {
         last_row = N-1;
@@ -68,7 +68,7 @@ int main(int an, char **as) {
     if (!rank){
         gettimeofday(&stop, NULL);
         secs = (double)(stop.tv_usec - start.tv_usec) / 1000000 + (double)(stop.tv_sec - start.tv_sec);
-        printf("time taken for thread=%d, N=%d: %f seconds\n", 0, N, secs);
+        printf("time taken for thread=%d, N=%d: %f seconds\n", num_workers, N, secs);
     }
 
     /* Shut down MPI */
@@ -116,12 +116,12 @@ void relax() {
     // IN tag	-	идентификатор сообщения (аналог типа сообщения функций nread и nwrite PSE nCUBE2);
     // IN comm	-	коммуникатор области связи.
     if (rank!=0) {MPI_Send(A[first_row], N, MPI_FLOAT, rank-1, up_send_tag, MPI_COMM_WORLD);}
-    if (rank!=num_tasks-1){
+    if (rank!=num_workers-1){
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank+1, up_send_tag, MPI_COMM_WORLD, &status);
         // (j + last_row) % 2 == 1   =>   j = 1+(last_row % 2)
         for (int j=1+(last_row % 2); j<=N-2; j+=2) {A[last_row][j] = tmp_A_row[j];}
     }
-    if (rank!=num_tasks-1) {MPI_Send(A[last_row-1], N, MPI_FLOAT, rank+1, down_send_tag, MPI_COMM_WORLD);}
+    if (rank!=num_workers-1) {MPI_Send(A[last_row-1], N, MPI_FLOAT, rank+1, down_send_tag, MPI_COMM_WORLD);}
     if (rank!=0){
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank-1, down_send_tag, MPI_COMM_WORLD, &status);
         for (int j=1+((first_row-1) % 2); j<=N-2; j+=2) {A[first_row-1][j] = tmp_A_row[j];}
@@ -148,12 +148,12 @@ void relax() {
             }
 
     if (rank!=0) {MPI_Send(A[first_row], N, MPI_FLOAT, rank-1, up_send_tag, MPI_COMM_WORLD);}
-    if (rank!=num_tasks-1){
+    if (rank!=num_workers-1){
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank+1, up_send_tag, MPI_COMM_WORLD, &status);
         // (j + last_row) % 2 == 0   =>   j = (last_row % 2)
         for (int j=(last_row % 2); j<=N-2; j+=2) {A[last_row][j] = tmp_A_row[j];}
     }
-    if (rank!=num_tasks-1) {MPI_Send(A[last_row-1], N, MPI_FLOAT, rank+1, down_send_tag, MPI_COMM_WORLD);}
+    if (rank!=num_workers-1) {MPI_Send(A[last_row-1], N, MPI_FLOAT, rank+1, down_send_tag, MPI_COMM_WORLD);}
     if (rank!=0){
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank-1, down_send_tag, MPI_COMM_WORLD, &status);
         for (int j=((first_row-1) % 2); j<=N-2; j+=2) {A[first_row-1][j] = tmp_A_row[j];}
@@ -194,3 +194,5 @@ void verify() {
     MPI_Reduce(&local_sum, &sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
     if (!rank) {printf("  S = %f\n", sum);}
 }
+
+// mpicc -std=c99 -o run_1 redb_2d.c -lm
