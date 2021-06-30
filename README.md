@@ -1,4 +1,4 @@
-# a Parallel Version of the Program for the Red-Black2D Task
+# Parallel Version of the Program for the Red-Black2D Task
 course "Supercomputers and Parallel Data Processing" 
 
 ## OpenMP version
@@ -17,5 +17,5 @@ $ mpisubmit.bg -n 8 -w 00:30:00 run # run
 Time of execution
 ![Time of execution](./mpi_time.jpg)
 
-[detailed report](file:///home/maria/Desktop/read_black_parallel/отчёт_openmp_mpi.pdf)
+[Detailed report](./отчёт_openmp_mpi.pdf)
 
