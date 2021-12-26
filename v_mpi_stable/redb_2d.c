@@ -1,13 +1,17 @@
 #include "mpi.h"
+#include <mpi-ext.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-// #include <unistd.h>
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
 #define  N   (1*64+2)
+
+MPI_Comm mpi_comm_world_custom;  // represents a logical group of MPI processes
+int error_occurred = 0;  // bool flag
+
 float maxeps = 0.1e-7;
 int itmax = 100;
 float w = 0.5;
@@ -24,6 +28,43 @@ void init();
 void verify();
 int master_job();
 
+
+static void verbose_errhandler (MPI_Comm *comm, int *err, ...) {
+    char errstr[MPI_MAX_ERROR_STRING];
+    int size, num_failed, len;
+    MPI_Group group_failed;
+    int old_rank = rank;
+    error_occurred = 1;
+    MPI_Comm_size(mpi_comm_world_custom, &size);
+    MPIX_Comm_failure_ack(mpi_comm_world_custom);
+    MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_failed);
+    MPI_Group_size(group_failed, &num_failed);
+    MPI_Error_string(*err, errstr, &len);
+
+//    MPIX_Comm_shrink(mpi_comm_world_custom, &mpi_comm_world_custom);
+//    MPI_Comm_rank(mpi_comm_world_custom, &rank);
+//    MPI_Comm_size(mpi_comm_world_custom, &size);
+//    printf("New rank for process %d: %d\n", old_rank, rank);
+//    MPI_Barrier(mpi_comm_world_custom);
+//    int * ranks = malloc(sizeof(int)*size);
+//    MPI_Gather(&old_rank, 1, MPI_INT, ranks, 1, MPI_INT, 0, mpi_comm_world_custom);
+//    if (rank == COORDINATOR_NUM) {
+//        int killed_proc_num;
+//        for (int i = 0; i < size - 1; ++i) {
+//            if (ranks[i + 1] - ranks[i] > 1) {
+//                killed_proc_num = ranks[i] + 1;
+//            }
+//        }
+//        printf("Killed proc: %d\n", killed_proc_num);
+//        sprintf(killed_filename, "./logs/%d.txt", killed_proc_num);
+//        int *read_array = calloc(splitted_size, sizeof(int));
+//        read_from_file(killed_filename, read_array, splitted_size);
+//        int *tmp_splitted_array = calloc(splitted_size, sizeof(int));
+//        merge_serial(read_array, tmp_splitted_array, splitted_size);
+//        save_into_file(new_killed_filename, read_array, splitted_size);
+//    }
+}
+
 int main(int an, char **as) {
 
     // создаем группу процессов и область связи
@@ -36,6 +77,12 @@ int main(int an, char **as) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // получаем общее кол-во процессов
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
+    mpi_comm_world_custom = MPI_COMM_WORLD;
+
+    MPI_Errhandler errh;
+    MPI_Comm_create_errhandler(verbose_errhandler, &errh);
+    MPI_Comm_set_errhandler(MPI_COMM_WORLD, errh);
+    MPI_Barrier(mpi_comm_world_custom);
 
     // -2 becouse first and last row is zero
     n_rows = (N-2) / num_workers;
