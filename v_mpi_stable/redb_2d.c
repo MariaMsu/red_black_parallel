@@ -42,6 +42,9 @@ void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]);
 void initialize_glob_row_borders(int num_workers, int rank);
 
 static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
+    have_been_killed = 1;
+    printf("KILL ");
+
     int amount_f, len;
     int old_size;
     int old_rank;
@@ -64,7 +67,7 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
         MPI_Group_translate_ranks(group_f, amount_f, f_ranks, group_norm, norm_ranks);
     }
     MPI_Error_string(*err, errstr, &len);
-    //printf("Rank %d / %d: Notified of error %s in %d processes\n", rank, size, errstr, amount_f);
+//    printf("Rank %d / %d: Notified of error %s in %d processes\n", rank, num_workers, errstr, amount_f);
 
     MPIX_Comm_shrink(*comm, &mpi_comm_world_custom);
     MPI_Comm_rank(mpi_comm_world_custom, &rank);
@@ -73,7 +76,9 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
 
     initialize_glob_row_borders(num_workers, rank);
     copy_matrices(copy_A, A);
-    longjmp(jbuf, 0);
+    MPI_Barrier(mpi_comm_world_custom);
+
+    //longjmp(jbuf, 1);
 }
 
 void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]) {
@@ -92,8 +97,8 @@ void initialize_glob_row_borders(int num_workers, int rank) {
     } else {
         last_row = N - 1;
     }
-//    printf("num_workers: %d, rank %d: first_row %d, last_row %d\n",
-//           num_workers, rank, first_row, last_row);
+    printf("num_workers: %d, rank %d: first_row %d, last_row %d\n",
+           num_workers, rank, first_row, last_row);
 }
 
 int main(int an, char **as) {
@@ -164,8 +169,6 @@ void init() {
 
 
 void relax() {
-    printf("TEST 2");
-
     MPI_Status status;
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -198,8 +201,6 @@ void relax() {
 
 #if KILL_PROC != 0
     if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)) {
-        printf("KILL");
-        have_been_killed = 1;
         raise(SIGKILL);
     }
 #endif

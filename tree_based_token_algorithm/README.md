@@ -1,6 +1,6 @@
 ```
 
 mpic++ -o run main.cpp
-mpiexec -np 4 ./run_1
+mpiexec -np 4 ./run
 
 ```
