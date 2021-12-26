@@ -11,10 +11,10 @@
 
 #define  N   (1*64+2)
 
-#define KILL_PROC 1
+#define KILL_PROC 0
+int have_been_killed = 0;  // bool flag
 
 #if KILL_PROC != 0
-int have_been_killed = 0;  // bool flag
 #define KILL_PROC_RANK 1  // we will kill a proc with this rank
 #endif
 
@@ -78,7 +78,7 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
     copy_matrices(copy_A, A);
     MPI_Barrier(mpi_comm_world_custom);
 
-    //longjmp(jbuf, 1);
+    longjmp(jbuf, 1);
 }
 
 void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]) {
@@ -204,7 +204,6 @@ void relax() {
         raise(SIGKILL);
     }
 #endif
-
 
     if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, MPI_COMM_WORLD); }
     if (rank != 0) {
