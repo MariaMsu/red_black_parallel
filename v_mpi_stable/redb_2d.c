@@ -10,9 +10,8 @@
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
 #define  N   (1*64+2)
-#define COORDINATOR_NUM 0
 
-#define KILL_PROC 0
+#define KILL_PROC 1
 
 #if KILL_PROC != 0
 int have_been_killed = 0;  // bool flag
@@ -43,7 +42,6 @@ void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]);
 void initialize_glob_row_borders(int num_workers, int rank);
 
 static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
-    printf("HANDLER");
     int amount_f, len;
     int old_size;
     int old_rank;
@@ -53,20 +51,19 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
     MPI_Group group_norm;
     MPI_Comm_rank(mpi_comm_world_custom, &old_rank);
     MPI_Comm_size(mpi_comm_world_custom, &old_size);
-    int* norm_ranks = malloc(sizeof(int)*old_size);
-    int* f_ranks = malloc(sizeof(int)*amount_f);
+    int *norm_ranks = malloc(sizeof(int) * old_size);
+    int *f_ranks = malloc(sizeof(int) * amount_f);
     //printf ("Amount of processes in communicator with failed processes: %d\n", old_size);
-    if (old_rank == 0)
-    {
+    if (old_rank == 0) {
         MPI_Comm_group(mpi_comm_world_custom, &group_norm);
         MPIX_Comm_failure_ack(mpi_comm_world_custom);
         MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_f);
         MPI_Group_size(group_f, &amount_f);
-        for (int i = 0; i<amount_f; i++)
+        for (int i = 0; i < amount_f; i++)
             f_ranks[i] = i;
         MPI_Group_translate_ranks(group_f, amount_f, f_ranks, group_norm, norm_ranks);
     }
-    MPI_Error_string( *err, errstr, &len );
+    MPI_Error_string(*err, errstr, &len);
     //printf("Rank %d / %d: Notified of error %s in %d processes\n", rank, size, errstr, amount_f);
 
     MPIX_Comm_shrink(*comm, &mpi_comm_world_custom);
@@ -95,8 +92,8 @@ void initialize_glob_row_borders(int num_workers, int rank) {
     } else {
         last_row = N - 1;
     }
-    printf("num_workers: %d, rank %d: first_row %d, last_row %d\n",
-           num_workers, rank, first_row, last_row);
+//    printf("num_workers: %d, rank %d: first_row %d, last_row %d\n",
+//           num_workers, rank, first_row, last_row);
 }
 
 int main(int an, char **as) {
@@ -167,6 +164,8 @@ void init() {
 
 
 void relax() {
+    printf("TEST 2");
+
     MPI_Status status;
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -195,15 +194,17 @@ void relax() {
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, MPI_COMM_WORLD, &status);
         // (j + last_row) % 2 == 1   =>   j = 1+(last_row % 2)
         for (int j = 1 + (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
+    }
 
 #if KILL_PROC != 0
-        if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)){
-            have_been_killed = 1;
-            raise(SIGKILL);
-        }
+    if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)) {
+        printf("KILL");
+        have_been_killed = 1;
+        raise(SIGKILL);
+    }
 #endif
 
-    }
+
     if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, MPI_COMM_WORLD); }
     if (rank != 0) {
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank - 1, down_send_tag, MPI_COMM_WORLD, &status);
