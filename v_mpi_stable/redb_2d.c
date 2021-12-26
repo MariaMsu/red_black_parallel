@@ -12,9 +12,9 @@
 #define  N   (1*64+2)
 #define COORDINATOR_NUM 0
 
-#define KILL_PROC 1;
+#define KILL_PROC 0
 
-#ifdef KILL_PROC
+#if KILL_PROC != 0
 int have_been_killed = 0;  // bool flag
 #define KILL_PROC_RANK 1  // we will kill a proc with this rank
 #endif
@@ -43,7 +43,8 @@ void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]);
 void initialize_glob_row_borders(int num_workers, int rank);
 
 static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
-    int rank, size, amount_f, len;
+    printf("HANDLER");
+    int amount_f, len;
     int old_size;
     int old_rank;
     char errstr[MPI_MAX_ERROR_STRING];
@@ -70,8 +71,7 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
 
     MPIX_Comm_shrink(*comm, &mpi_comm_world_custom);
     MPI_Comm_rank(mpi_comm_world_custom, &rank);
-    MPI_Comm_size(mpi_comm_world_custom, &size);
-    //printf ("Amount of processes in communicator without failed processes: %d\n", size);
+    MPI_Comm_size(mpi_comm_world_custom, &num_workers);
     MPI_Barrier(mpi_comm_world_custom);
 
     initialize_glob_row_borders(num_workers, rank);
@@ -95,7 +95,8 @@ void initialize_glob_row_borders(int num_workers, int rank) {
     } else {
         last_row = N - 1;
     }
-    printf("rank %d: first_row %d, last_row %d\n", rank, first_row, last_row);
+    printf("num_workers: %d, rank %d: first_row %d, last_row %d\n",
+           num_workers, rank, first_row, last_row);
 }
 
 int main(int an, char **as) {
@@ -195,7 +196,7 @@ void relax() {
         // (j + last_row) % 2 == 1   =>   j = 1+(last_row % 2)
         for (int j = 1 + (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
 
-#ifdef KILL_PROC
+#if KILL_PROC != 0
         if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)){
             have_been_killed = 1;
             raise(SIGKILL);
