@@ -8,6 +8,7 @@
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
 #define  N   (1*64+2)
+#define COORDINATOR_NUM 0
 
 MPI_Comm mpi_comm_world_custom;  // represents a logical group of MPI processes
 int error_occurred = 0;  // bool flag
@@ -36,33 +37,33 @@ static void verbose_errhandler (MPI_Comm *comm, int *err, ...) {
     int old_rank = rank;
     error_occurred = 1;
     MPI_Comm_size(mpi_comm_world_custom, &size);
-    MPIX_Comm_failure_ack(mpi_comm_world_custom);
-    MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_failed);
+    MPIX_Comm_failure_ack(mpi_comm_world_custom);  // Acknowledge the current group of failed processes
+    MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_failed);  // Get the group of acknowledged failures.
     MPI_Group_size(group_failed, &num_failed);
     MPI_Error_string(*err, errstr, &len);
 
-//    MPIX_Comm_shrink(mpi_comm_world_custom, &mpi_comm_world_custom);
-//    MPI_Comm_rank(mpi_comm_world_custom, &rank);
-//    MPI_Comm_size(mpi_comm_world_custom, &size);
-//    printf("New rank for process %d: %d\n", old_rank, rank);
-//    MPI_Barrier(mpi_comm_world_custom);
-//    int * ranks = malloc(sizeof(int)*size);
-//    MPI_Gather(&old_rank, 1, MPI_INT, ranks, 1, MPI_INT, 0, mpi_comm_world_custom);
-//    if (rank == COORDINATOR_NUM) {
-//        int killed_proc_num;
-//        for (int i = 0; i < size - 1; ++i) {
-//            if (ranks[i + 1] - ranks[i] > 1) {
-//                killed_proc_num = ranks[i] + 1;
-//            }
-//        }
-//        printf("Killed proc: %d\n", killed_proc_num);
+    MPIX_Comm_shrink(mpi_comm_world_custom, &mpi_comm_world_custom);
+    MPI_Comm_rank(mpi_comm_world_custom, &rank);
+    MPI_Comm_size(mpi_comm_world_custom, &size);
+    printf("New rank for process %d: %d\n", old_rank, rank);
+    MPI_Barrier(mpi_comm_world_custom);
+    int * ranks = malloc(sizeof(int)*size);
+    MPI_Gather(&old_rank, 1, MPI_INT, ranks, 1, MPI_INT, 0, mpi_comm_world_custom);
+    if (rank == COORDINATOR_NUM) {
+        int killed_proc_num;
+        for (int i = 0; i < size - 1; ++i) {
+            if (ranks[i + 1] - ranks[i] > 1) {
+                killed_proc_num = ranks[i] + 1;
+            }
+        }
+        printf("Killed proc: %d\n", killed_proc_num);
 //        sprintf(killed_filename, "./logs/%d.txt", killed_proc_num);
-//        int *read_array = calloc(splitted_size, sizeof(int));
+        int *read_array = calloc(splitted_size, sizeof(int));
 //        read_from_file(killed_filename, read_array, splitted_size);
 //        int *tmp_splitted_array = calloc(splitted_size, sizeof(int));
 //        merge_serial(read_array, tmp_splitted_array, splitted_size);
 //        save_into_file(new_killed_filename, read_array, splitted_size);
-//    }
+    }
 }
 
 int main(int an, char **as) {
@@ -84,7 +85,9 @@ int main(int an, char **as) {
     MPI_Comm_set_errhandler(MPI_COMM_WORLD, errh);
     MPI_Barrier(mpi_comm_world_custom);
 
-    // -2 becouse first and last row is zero
+    // sprintf(filename, "./logs/%d.txt", rank);
+
+    // -2 because first and last row is zero
     n_rows = (N-2) / num_workers;
     first_row = n_rows * rank + 1;
     if (rank != num_workers-1){

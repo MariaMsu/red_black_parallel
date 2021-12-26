@@ -36,7 +36,7 @@ int main(int an, char **as) {
     // получаем общее кол-во процессов
     MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
 
-    // -2 becouse first and last row is zero
+    // -2 because first and last row is zero
     n_rows = (N-2) / num_workers;
     first_row = n_rows * rank + 1;
     if (rank != num_workers-1){
