@@ -7,7 +7,7 @@
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
-#define  N   (256*64+2)
+#define  N   (1*64+2)
 float maxeps = 0.1e-7;
 int itmax = 100;
 float w = 0.5;
@@ -27,11 +27,11 @@ int master_job();
 int main(int an, char **as) {
 
     // создаем группу процессов и область связи
-    if (rc = MPI_Init(&an, &as)) {
+    if ((rc = MPI_Init(&an, &as))) {
         printf("Ошибка запуска %d, выполнение остановлено\n", rc);
         MPI_Abort(MPI_COMM_WORLD, rc);
         return rc;
-    };
+    }
     // получаем номер текущего процесса
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // получаем общее кол-во процессов
@@ -44,13 +44,12 @@ int main(int an, char **as) {
         last_row = first_row + n_rows;
     } else {
         last_row = N-1;
-    };
+    }
 
     printf("rank %d: first_row %d, last_row %d\n", rank, first_row, last_row);
 
-    int status;
     struct timeval start, stop;
-    double secs = 0;
+    double secs;
     if (!rank){
         gettimeofday(&start, NULL);
     }
@@ -129,7 +128,7 @@ void relax() {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // sleep(rank); 
+    // sleep(rank);
     // printf("\nrank %d, не чётный\n", rank);
     // for (int i = 0; i < N; ++i){
     //     for (int j = 0; j < N; ++j){
@@ -164,7 +163,7 @@ void relax() {
     // Reduce local_eps in each proc
     MPI_Allreduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
 
-    // sleep(rank); 
+    // sleep(rank);
     // printf("\nrank %d, чётный\n", rank);
     // for (int i = 0; i < N; ++i){
     //     for (int j = 0; j < N; ++j){
@@ -173,7 +172,7 @@ void relax() {
     //     printf("\n");
     // }
     // printf("\n");
-    // MPI_Barrier(MPI_COMM_WORLD); 
+    // MPI_Barrier(MPI_COMM_WORLD);
 }
 
 

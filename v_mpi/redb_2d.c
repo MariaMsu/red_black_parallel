@@ -27,11 +27,11 @@ int master_job();
 int main(int an, char **as) {
 
     // создаем группу процессов и область связи
-    if (rc = MPI_Init(&an, &as)) { 
+    if ((rc = MPI_Init(&an, &as))) {
         printf("Ошибка запуска %d, выполнение остановлено\n", rc);
         MPI_Abort(MPI_COMM_WORLD, rc);
         return rc;
-    };
+    }
     // получаем номер текущего процесса
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     // получаем общее кол-во процессов
@@ -44,13 +44,12 @@ int main(int an, char **as) {
         last_row = first_row + n_rows;
     } else {
         last_row = N-1;
-    };
+    }
 
     printf("rank %d: first_row %d, last_row %d\n", rank, first_row, last_row);
 
-    int status;
     struct timeval start, stop;
-    double secs = 0;
+    double secs;
     if (!rank){
         gettimeofday(&start, NULL);
     }
