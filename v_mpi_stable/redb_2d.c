@@ -5,13 +5,19 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <setjmp.h>
+#include <signal.h>
 
 #define  Max(a, b) ((a)>(b)?(a):(b))
 
 #define  N   (1*64+2)
 #define COORDINATOR_NUM 0
 
-int is_killed = 0;  // TODO
+#define KILL_PROC 0;
+
+#ifdef KILL_PROC
+int have_been_killed = 0;
+#define KILL_PROC_RANK 1  // we will kill a proc with this rank
+#endif
 
 MPI_Comm mpi_comm_world_custom;  // represents a logical group of MPI processes
 int error_occurred = 0;  // bool flag
@@ -187,6 +193,14 @@ void relax() {
         MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, MPI_COMM_WORLD, &status);
         // (j + last_row) % 2 == 1   =>   j = 1+(last_row % 2)
         for (int j = 1 + (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
+
+#ifdef KILL_PROC
+        if ((have_been_killed != 0) && (rank == KILL_PROC_RANK)){
+            raise(SIGKILL);
+            have_been_killed = 1;
+        }
+#endif
+
     }
     if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, MPI_COMM_WORLD); }
     if (rank != 0) {
