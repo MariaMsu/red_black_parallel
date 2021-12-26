@@ -12,15 +12,14 @@
 #define  N   (1*64+2)
 #define COORDINATOR_NUM 0
 
-#define KILL_PROC 0;
+#define KILL_PROC 1;
 
 #ifdef KILL_PROC
-int have_been_killed = 0;
+int have_been_killed = 0;  // bool flag
 #define KILL_PROC_RANK 1  // we will kill a proc with this rank
 #endif
 
 MPI_Comm mpi_comm_world_custom;  // represents a logical group of MPI processes
-int error_occurred = 0;  // bool flag
 
 float maxeps = 0.1e-7;
 int itmax = 100;
@@ -40,6 +39,45 @@ void relax();
 void init();
 void verify();
 int master_job();
+void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]);
+void initialize_glob_row_borders(int num_workers, int rank);
+
+static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
+    int rank, size, amount_f, len;
+    int old_size;
+    int old_rank;
+    char errstr[MPI_MAX_ERROR_STRING];
+
+    MPI_Group group_f;
+    MPI_Group group_norm;
+    MPI_Comm_rank(mpi_comm_world_custom, &old_rank);
+    MPI_Comm_size(mpi_comm_world_custom, &old_size);
+    int* norm_ranks = malloc(sizeof(int)*old_size);
+    int* f_ranks = malloc(sizeof(int)*amount_f);
+    //printf ("Amount of processes in communicator with failed processes: %d\n", old_size);
+    if (old_rank == 0)
+    {
+        MPI_Comm_group(mpi_comm_world_custom, &group_norm);
+        MPIX_Comm_failure_ack(mpi_comm_world_custom);
+        MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_f);
+        MPI_Group_size(group_f, &amount_f);
+        for (int i = 0; i<amount_f; i++)
+            f_ranks[i] = i;
+        MPI_Group_translate_ranks(group_f, amount_f, f_ranks, group_norm, norm_ranks);
+    }
+    MPI_Error_string( *err, errstr, &len );
+    //printf("Rank %d / %d: Notified of error %s in %d processes\n", rank, size, errstr, amount_f);
+
+    MPIX_Comm_shrink(*comm, &mpi_comm_world_custom);
+    MPI_Comm_rank(mpi_comm_world_custom, &rank);
+    MPI_Comm_size(mpi_comm_world_custom, &size);
+    //printf ("Amount of processes in communicator without failed processes: %d\n", size);
+    MPI_Barrier(mpi_comm_world_custom);
+
+    initialize_glob_row_borders(num_workers, rank);
+    copy_matrices(copy_A, A);
+    longjmp(jbuf, 0);
+}
 
 void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]) {
     for (int i = first_row; i < last_row; i++)
@@ -47,43 +85,6 @@ void copy_matrices(float from_matrix[N][N], float to_matrix[N][N]) {
             to_matrix[i][j] = from_matrix[i][j];
         }
 }
-
-static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
-//    char errstr[MPI_MAX_ERROR_STRING];
-//    int size, num_failed, len;
-//    MPI_Group group_failed;
-//    int old_rank = rank;
-//    error_occurred = 1;
-//    MPI_Comm_size(mpi_comm_world_custom, &size);
-//    MPIX_Comm_failure_ack(mpi_comm_world_custom);  // Acknowledge the current group of failed processes
-//    MPIX_Comm_failure_get_acked(mpi_comm_world_custom, &group_failed);  // Get the group of acknowledged failures.
-//    MPI_Group_size(group_failed, &num_failed);
-//    MPI_Error_string(*err, errstr, &len);
-//
-//    MPIX_Comm_shrink(mpi_comm_world_custom, &mpi_comm_world_custom);
-//    MPI_Comm_rank(mpi_comm_world_custom, &rank);
-//    MPI_Comm_size(mpi_comm_world_custom, &size);
-//    printf("New rank for process %d: %d\n", old_rank, rank);
-//    MPI_Barrier(mpi_comm_world_custom);
-//    int * ranks = malloc(sizeof(int)*size);
-//    MPI_Gather(&old_rank, 1, MPI_INT, ranks, 1, MPI_INT, 0, mpi_comm_world_custom);
-//    if (rank == COORDINATOR_NUM) {
-//        int killed_proc_num;
-//        for (int i = 0; i < size - 1; ++i) {
-//            if (ranks[i + 1] - ranks[i] > 1) {
-//                killed_proc_num = ranks[i] + 1;
-//            }
-//        }
-//        printf("Killed proc: %d\n", killed_proc_num);
-////        sprintf(killed_filename, "./logs/%d.txt", killed_proc_num);
-//        int *read_array = calloc(splitted_size, sizeof(int));
-////        read_from_file(killed_filename, read_array, splitted_size);
-////        int *tmp_splitted_array = calloc(splitted_size, sizeof(int));
-////        merge_serial(read_array, tmp_splitted_array, splitted_size);
-////        save_into_file(new_killed_filename, read_array, splitted_size);
-//    }
-}
-
 
 void initialize_glob_row_borders(int num_workers, int rank) {
     // -2 because first and last row is zero
@@ -195,9 +196,9 @@ void relax() {
         for (int j = 1 + (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
 
 #ifdef KILL_PROC
-        if ((have_been_killed != 0) && (rank == KILL_PROC_RANK)){
-            raise(SIGKILL);
+        if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)){
             have_been_killed = 1;
+            raise(SIGKILL);
         }
 #endif
 
