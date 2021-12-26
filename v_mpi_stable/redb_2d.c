@@ -16,7 +16,7 @@ float eps, local_eps;
 float A[N][N];
 float tmp_A_row[N];
 
-int rank, num_workers, num_workers, rc;
+int rank, num_workers, rc;
 int first_row, last_row, n_rows;
 
 void relax();
@@ -27,7 +27,7 @@ int master_job();
 int main(int an, char **as) {
 
     // создаем группу процессов и область связи
-    if (rc = MPI_Init(&an, &as)) { 
+    if (rc = MPI_Init(&an, &as)) {
         printf("Ошибка запуска %d, выполнение остановлено\n", rc);
         MPI_Abort(MPI_COMM_WORLD, rc);
         return rc;
@@ -54,7 +54,7 @@ int main(int an, char **as) {
     if (!rank){
         gettimeofday(&start, NULL);
     }
-    
+
     init();
     for (int it = 1; it <= itmax; it++) {
         eps = 0.;
@@ -93,8 +93,8 @@ void init() {
 
 
 void relax() {
-    MPI_Status status;  
-    MPI_Barrier(MPI_COMM_WORLD); 
+    MPI_Status status;
+    MPI_Barrier(MPI_COMM_WORLD);
 
     int up_send_tag = 2, down_send_tag = 3;
 
@@ -127,7 +127,7 @@ void relax() {
         for (int j=1+((first_row-1) % 2); j<=N-2; j+=2) {A[first_row-1][j] = tmp_A_row[j];}
     }
 
-    MPI_Barrier(MPI_COMM_WORLD); 
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // sleep(rank); 
     // printf("\nrank %d, не чётный\n", rank);
@@ -137,7 +137,7 @@ void relax() {
     //     }
     //     printf("\n");
     // }
-    
+
     // меняются только чётные
     for (int i = first_row; i < last_row; i++)
         for (int j = 1; j <= N - 2; j++)
@@ -159,7 +159,7 @@ void relax() {
         for (int j=((first_row-1) % 2); j<=N-2; j+=2) {A[first_row-1][j] = tmp_A_row[j];}
     }
 
-    MPI_Barrier(MPI_COMM_WORLD); 
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Reduce local_eps in each proc
     MPI_Allreduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
@@ -185,7 +185,7 @@ void verify() {
     int end = last_row;
     if (first_row == 1) {begin = 0;}
     if (last_row == N - 1) {end = N - 1;}
-    
+
     for (int i = begin; i <= end; i++)
         for (int j = 0; j <= N - 1; j++){
             local_sum = local_sum + A[i][j] * (i + 1) * (j + 1) / (N * N);

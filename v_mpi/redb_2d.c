@@ -16,7 +16,7 @@ float eps, local_eps;
 float A[N][N];
 float tmp_A_row[N];
 
-int rank, num_workers, num_workers, rc;
+int rank, num_workers, rc;
 int first_row, last_row, n_rows;
 
 void relax();
