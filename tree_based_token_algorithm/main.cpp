@@ -5,16 +5,16 @@
 #include <string>
 #include <stdexcept>
 
-const std::string file_name = "critical.txt";
+const char* file_name = "critical.txt";
 
 void critical_section() {
-    if (FILE * file = fopen(file_name.c_str(), "r")) {  // проверка наличия файла “critical.txt”
+    if (FILE * file = fopen(file_name, "r")) {  // проверка наличия файла “critical.txt”
         throw std::runtime_error("two ore more process are in critical section simultaneously");
     }
-    FILE *file = fopen(file_name.c_str(), "w");  // создание файла “critical.txt”
+    FILE *file = fopen(file_name, "w");  // создание файла “critical.txt”
     unsigned int microseconds = std::rand() % 1000000 ;
     usleep(microseconds);  //Sleep (<случайное время>);
-    std::remove(file_name.c_str()); // уничтожение файла “critical.txt”
+    std::remove(file_name); // уничтожение файла “critical.txt”
 }
 
 struct Node {
