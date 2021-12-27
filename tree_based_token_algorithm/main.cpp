@@ -12,7 +12,7 @@ void critical_section() {
         throw std::runtime_error("two ore more process are in critical section simultaneously");
     }
     FILE *file = fopen(file_name.c_str(), "w");  // создание файла “critical.txt”
-    unsigned int microseconds = 100000;
+    unsigned int microseconds = std::rand() % 1000000 ;
     usleep(microseconds);  //Sleep (<случайное время>);
     std::remove(file_name.c_str()); // уничтожение файла “critical.txt”
 }
