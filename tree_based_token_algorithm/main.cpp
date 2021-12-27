@@ -14,7 +14,7 @@ void critical_section() {
         //<сообщение об ошибке>;
     }
     FILE *file = fopen(file_name.c_str(), "w");//<создание файла “critical.txt”>;
-    unsigned int microseconds = 10000;
+    unsigned int microseconds = 100000;
     usleep(microseconds);//Sleep (<случайное время>);
     std::remove(file_name.c_str()); // уничтожение файла “critical.txt”
 }
@@ -38,6 +38,7 @@ struct Node {
     void call() {
         int number = 1;
         if (parent_process != -1) { // it is a root
+            printf("process %d wait the marker from %d\n", current_process, parent_process);
             MPI_Recv(&number, 1, MPI_INT, parent_process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
         printf("process %d got the marker\n", current_process);
@@ -74,37 +75,18 @@ int main(int an, char **as) {
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    int parent_proc = world_rank / 2 - 1;  // -1 because we enumerate nodes starting from 0
-    if (parent_proc < 0){
+    int parent_proc = (world_rank-1) / 2;
+    if (world_rank == 0){  // it is the root
         parent_proc = -1;
     }
-    int left_proc = world_rank * 2 - 1;
+    int left_proc = world_rank * 2 + 1;
     if (left_proc >= world_size){
         left_proc = -1;
     }
-    int right_proc = world_rank * 2 + 1 - 1;
+    int right_proc = world_rank * 2 + 2;
     if (right_proc >= world_size){
         right_proc = -1;
     }
     Node node = Node(world_rank, parent_proc, left_proc, right_proc);
     node.call();
-
-
-//    int number;
-//    MPI_Request request;
-//    MPI_Status status;
-//    if (world_rank == 0) {
-//        number = -1;
-//        MPI_Send(&number, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-//        critical_section();
-//    } else if (world_rank == 1) {
-//         MPI_Recv(&number, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//        // void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status
-////        MPI_Irecv(&number, 1, MPI_INT, MPI_ANY_TAG, 0, MPI_COMM_WORLD, &request);
-//        // void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request
-//        MPI_Wait(&request, &status);
-//        critical_section();
-//        printf("Process 1 received number %d from process 0\n",
-//               number);
-//    }
 }
