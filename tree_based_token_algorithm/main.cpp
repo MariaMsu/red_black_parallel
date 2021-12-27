@@ -87,4 +87,8 @@ int main(int an, char **as) {
     }
     Node node = Node(world_rank, parent_proc, left_proc, right_proc);
     node.call();
+
+    /* Shut down MPI */
+    MPI_Finalize();
+    return 0;
 }

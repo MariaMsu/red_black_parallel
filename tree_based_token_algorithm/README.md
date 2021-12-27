@@ -1,6 +1,6 @@
 ```
 
 mpic++ -o run main.cpp
-mpiexec -np 4 ./run
+mpiexec -np 25 --map-by :OVERSUBSCRIBE ./run
 
 ```
