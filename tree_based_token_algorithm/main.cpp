@@ -1,6 +1,5 @@
 #include <cstdio>
 #include "mpi.h"
-//#include <sys/stat.h>
 #include <unistd.h>
 
 #include <string>
@@ -10,12 +9,11 @@ const std::string file_name = "critical.txt";
 
 void critical_section() {
     if (FILE * file = fopen(file_name.c_str(), "r")) {  // проверка наличия файла “critical.txt”
-        throw std::invalid_argument("received negative value");  // TODO change exception
-        //<сообщение об ошибке>;
+        throw std::runtime_error("two ore more process are in critical section simultaneously");
     }
-    FILE *file = fopen(file_name.c_str(), "w");//<создание файла “critical.txt”>;
+    FILE *file = fopen(file_name.c_str(), "w");  // создание файла “critical.txt”
     unsigned int microseconds = 100000;
-    usleep(microseconds);//Sleep (<случайное время>);
+    usleep(microseconds);  //Sleep (<случайное время>);
     std::remove(file_name.c_str()); // уничтожение файла “critical.txt”
 }
 
@@ -36,7 +34,7 @@ struct Node {
     }
 
     void call() {
-        int number = 1;
+        int number = 1;  // the very value is not important. We just send and receive anything
         if (parent_process != -1) { // it is a root
             printf("process %d wait the marker from %d\n", current_process, parent_process);
             MPI_Recv(&number, 1, MPI_INT, parent_process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -75,16 +73,16 @@ int main(int an, char **as) {
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    int parent_proc = (world_rank-1) / 2;
-    if (world_rank == 0){  // it is the root
+    int parent_proc = (world_rank - 1) / 2;
+    if (world_rank == 0) {  // it is the root
         parent_proc = -1;
     }
     int left_proc = world_rank * 2 + 1;
-    if (left_proc >= world_size){
+    if (left_proc >= world_size) {
         left_proc = -1;
     }
     int right_proc = world_rank * 2 + 2;
-    if (right_proc >= world_size){
+    if (right_proc >= world_size) {
         right_proc = -1;
     }
     Node node = Node(world_rank, parent_proc, left_proc, right_proc);
