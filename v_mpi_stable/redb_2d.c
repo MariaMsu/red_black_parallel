@@ -11,7 +11,7 @@
 
 #define  N   (1*64+2)
 
-#define KILL_PROC 0
+#define KILL_PROC 1
 int have_been_killed = 0;  // bool flag
 
 #if KILL_PROC != 0
@@ -43,7 +43,6 @@ void initialize_glob_row_borders(int num_workers, int rank);
 
 static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
     have_been_killed = 1;
-    printf("KILL ");
 
     int amount_f, len;
     int old_size;
@@ -56,7 +55,6 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
     MPI_Comm_size(mpi_comm_world_custom, &old_size);
     int *norm_ranks = malloc(sizeof(int) * old_size);
     int *f_ranks = malloc(sizeof(int) * amount_f);
-    //printf ("Amount of processes in communicator with failed processes: %d\n", old_size);
     if (old_rank == 0) {
         MPI_Comm_group(mpi_comm_world_custom, &group_norm);
         MPIX_Comm_failure_ack(mpi_comm_world_custom);
@@ -67,7 +65,6 @@ static void verbose_errhandler(MPI_Comm *comm, int *err, ...) {
         MPI_Group_translate_ranks(group_f, amount_f, f_ranks, group_norm, norm_ranks);
     }
     MPI_Error_string(*err, errstr, &len);
-//    printf("Rank %d / %d: Notified of error %s in %d processes\n", rank, num_workers, errstr, amount_f);
 
     MPIX_Comm_shrink(*comm, &mpi_comm_world_custom);
     MPI_Comm_rank(mpi_comm_world_custom, &rank);
@@ -170,7 +167,7 @@ void init() {
 
 void relax() {
     MPI_Status status;
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mpi_comm_world_custom);
 
     int up_send_tag = 2, down_send_tag = 3;
 
@@ -192,35 +189,27 @@ void relax() {
     // IN dest	-	номер процесса-получателя в группе, связанной с коммуникатором comm;
     // IN tag	-	идентификатор сообщения (аналог типа сообщения функций nread и nwrite PSE nCUBE2);
     // IN comm	-	коммуникатор области связи.
-    if (rank != 0) { MPI_Send(A[first_row], N, MPI_FLOAT, rank - 1, up_send_tag, MPI_COMM_WORLD); }
+    if (rank != 0) { MPI_Send(A[first_row], N, MPI_FLOAT, rank - 1, up_send_tag, mpi_comm_world_custom); }
     if (rank != num_workers - 1) {
-        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, mpi_comm_world_custom, &status);
         // (j + last_row) % 2 == 1   =>   j = 1+(last_row % 2)
         for (int j = 1 + (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
     }
 
 #if KILL_PROC != 0
     if ((have_been_killed == 0) && (rank == KILL_PROC_RANK)) {
+        printf("KILL \n");
         raise(SIGKILL);
     }
 #endif
 
-    if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, MPI_COMM_WORLD); }
+    if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, mpi_comm_world_custom); }
     if (rank != 0) {
-        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank - 1, down_send_tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank - 1, down_send_tag, mpi_comm_world_custom, &status);
         for (int j = 1 + ((first_row - 1) % 2); j <= N - 2; j += 2) { A[first_row - 1][j] = tmp_A_row[j]; }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // sleep(rank);
-    // printf("\nrank %d, не чётный\n", rank);
-    // for (int i = 0; i < N; ++i){
-    //     for (int j = 0; j < N; ++j){
-    //         printf("%f ", A[i][j]);
-    //     }
-    //     printf("\n");
-    // }
+    MPI_Barrier(mpi_comm_world_custom);
 
     // меняются только чётные
     for (int i = first_row; i < last_row; i++)
@@ -231,33 +220,22 @@ void relax() {
                 A[i][j] = A[i][j] + b;
             }
 
-    if (rank != 0) { MPI_Send(A[first_row], N, MPI_FLOAT, rank - 1, up_send_tag, MPI_COMM_WORLD); }
+    if (rank != 0) { MPI_Send(A[first_row], N, MPI_FLOAT, rank - 1, up_send_tag, mpi_comm_world_custom); }
     if (rank != num_workers - 1) {
-        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank + 1, up_send_tag, mpi_comm_world_custom, &status);
         // (j + last_row) % 2 == 0   =>   j = (last_row % 2)
         for (int j = (last_row % 2); j <= N - 2; j += 2) { A[last_row][j] = tmp_A_row[j]; }
     }
-    if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, MPI_COMM_WORLD); }
+    if (rank != num_workers - 1) { MPI_Send(A[last_row - 1], N, MPI_FLOAT, rank + 1, down_send_tag, mpi_comm_world_custom); }
     if (rank != 0) {
-        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank - 1, down_send_tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(tmp_A_row, N, MPI_FLOAT, rank - 1, down_send_tag, mpi_comm_world_custom, &status);
         for (int j = ((first_row - 1) % 2); j <= N - 2; j += 2) { A[first_row - 1][j] = tmp_A_row[j]; }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mpi_comm_world_custom);
 
     // Reduce local_eps in each proc
-    MPI_Allreduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
-
-    // sleep(rank);
-    // printf("\nrank %d, чётный\n", rank);
-    // for (int i = 0; i < N; ++i){
-    //     for (int j = 0; j < N; ++j){
-    //         printf("%f ", A[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-    // MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allreduce(&local_eps, &eps, 1, MPI_FLOAT, MPI_MAX, mpi_comm_world_custom);
 }
 
 
@@ -275,7 +253,7 @@ void verify() {
             local_sum = local_sum + A[i][j] * (i + 1) * (j + 1) / (N * N);
         }
 
-    MPI_Reduce(&local_sum, &sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_sum, &sum, 1, MPI_FLOAT, MPI_SUM, 0, mpi_comm_world_custom);
     if (!rank) { printf("  S = %f\n", sum); }
 }
 
