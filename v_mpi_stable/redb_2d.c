@@ -132,7 +132,6 @@ int main(int an, char **as) {
         eps = 0.;
         local_eps = 0.;
         relax();
-        // if (!rank) {printf("it=%4i   eps=%f\n", it, eps);}
         if (eps < maxeps) break;
         copy_matrices(A, copy_A);
     }
@@ -256,5 +255,3 @@ void verify() {
     MPI_Reduce(&local_sum, &sum, 1, MPI_FLOAT, MPI_SUM, 0, mpi_comm_world_custom);
     if (!rank) { printf("  S = %f\n", sum); }
 }
-
-// mpicc -std=c99 -o run_1 redb_2d.c -lm
