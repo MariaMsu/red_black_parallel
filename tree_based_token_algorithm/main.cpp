@@ -13,7 +13,7 @@ void critical_section() {
     }
     FILE *file = fopen(file_name, "w");  // создание файла “critical.txt”
     unsigned int microseconds = std::rand() % 1000000 ;
-    usleep(microseconds);  //Sleep (<случайное время>);
+    usleep(microseconds);  // Sleep (<случайное время>);
     std::remove(file_name); // уничтожение файла “critical.txt”
 }
 
@@ -35,7 +35,9 @@ struct Node {
 
     void call() {
         int number = 1;  // the very value is not important. We just send and receive anything
-        if (parent_process != -1) { // it is a root
+        if (parent_process != -1) {
+            // if parent_process != -1 then it  is a root =>
+            // the process already has the marker (according to the task, not to the tree-token algorithm )
             printf("process %d wait the marker from %d\n", current_process, parent_process);
             MPI_Recv(&number, 1, MPI_INT, parent_process, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
