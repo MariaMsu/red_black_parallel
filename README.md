@@ -22,6 +22,8 @@ Time of execution
 
 ### [Report for Supercomputers and Parallel Data Processing](./Отчет.%20Суперкомпьютеры%20и%20параллельная%20обработка%20данных.pdf)
 
+================================
+
 ## MPI stable version
 This version parallelizes the task in the same way as "MPI version",
 but if one of the processes will be killed, then the program can redistribute calculations 
@@ -39,4 +41,4 @@ tree_based_token_algorithm$ mpic++ -o run main.cpp  # build
 tree_based_token_algorithm$ mpiexec -np 25 --map-by :OVERSUBSCRIBE ./run  # run
 ```
 
-### [Report for Distributed systems](./Отчет.%20СРаспределенные%20Ссистемы.pdf)
+### [Report for Distributed systems](./Отчет.%20Распределенные%20системы.pdf)
